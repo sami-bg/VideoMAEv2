@@ -358,6 +358,54 @@ class PretrainVisionTransformer(nn.Module):
         x = self.decoder(x_full, pos_emd_mask.shape[1])
 
         return x
+    
+
+
+@register_model
+def pretrain_videomae_nano_patch16_224(pretrained=False, **kwargs):
+    model = PretrainVisionTransformer(
+        img_size=224,
+        patch_size=16,
+        encoder_embed_dim=96,
+        encoder_depth=6,
+        encoder_num_heads=3,
+        encoder_num_classes=0,
+        decoder_num_classes=1536,  # 16 * 16 * 3 * 2
+        decoder_embed_dim=48,
+        decoder_num_heads=1,
+        mlp_ratio=4,
+        qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        checkpoint = torch.load(kwargs["init_ckpt"], map_location="cpu")
+        model.load_state_dict(checkpoint["model"])
+    return model
+
+
+
+@register_model
+def pretrain_videomae_mini_patch16_224(pretrained=False, **kwargs):
+    model = PretrainVisionTransformer(
+        img_size=224,
+        patch_size=16,
+        encoder_embed_dim=192,
+        encoder_depth=6,
+        encoder_num_heads=3,
+        encoder_num_classes=0,
+        decoder_num_classes=1536,  # 16 * 16 * 3 * 2
+        decoder_embed_dim=96,
+        decoder_num_heads=1,
+        mlp_ratio=4,
+        qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        checkpoint = torch.load(kwargs["init_ckpt"], map_location="cpu")
+        model.load_state_dict(checkpoint["model"])
+    return model
 
 
 @register_model
