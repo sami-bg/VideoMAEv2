@@ -36,6 +36,8 @@ def train_one_epoch(model: torch.nn.Module,
         'lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     metric_logger.add_meter(
         'min_lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter(
+        'rankme', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 20
 
@@ -106,6 +108,7 @@ def train_one_epoch(model: torch.nn.Module,
         else:
             with torch.cuda.amp.autocast():
                 outputs = model(images, bool_masked_pos, decode_masked_pos)
+                _rankme = utils.get_rankme()
                 loss = (outputs - labels)**2
                 loss = loss.mean(dim=-1)
                 cal_loss_mask = bool_masked_pos[~decode_masked_pos].reshape(
@@ -159,6 +162,7 @@ def train_one_epoch(model: torch.nn.Module,
                 weight_decay_value = group["weight_decay"]
         metric_logger.update(weight_decay=weight_decay_value)
         metric_logger.update(grad_norm=grad_norm)
+        metric_logger.update(rankme=utils.get_rankme())
 
         if log_writer is not None:
             log_writer.update(loss=loss_value, head="loss")
@@ -167,7 +171,8 @@ def train_one_epoch(model: torch.nn.Module,
             log_writer.update(min_lr=min_lr, head="opt")
             log_writer.update(weight_decay=weight_decay_value, head="opt")
             log_writer.update(grad_norm=grad_norm, head="opt")
-
+            log_writer.update(rankme=utils.get_rankme())
+            
             log_writer.set_step()
 
         if lr_scheduler is not None:

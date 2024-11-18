@@ -19,7 +19,7 @@ from .modeling_finetune import (
     _cfg,
     get_sinusoid_encoding_table,
 )
-
+import utils
 
 def trunc_normal_(tensor, mean=0., std=1.):
     __call_trunc_normal_(tensor, mean=mean, std=std, a=-std, b=std)
@@ -141,6 +141,9 @@ class PretrainVisionTransformerEncoder(nn.Module):
     def forward(self, x, mask):
         x = self.forward_features(x, mask)
         x = self.head(x)
+        # NOTE set rankme singleton on encoder's fwd pass to avoid changing training loop
+        _rankme = utils.rankme(x)
+        utils.set_rankme(_rankme)
         return x
 
 

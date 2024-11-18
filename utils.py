@@ -640,3 +640,27 @@ def multiple_pretrain_samples_collate(batch, fold=False):
         return [process_data], encoder_mask, decoder_mask
     else:
         return process_data, encoder_mask, decoder_mask
+
+_RANKME_SINGLETON = None
+_RANKME_EPSILON = 1e-7
+
+def rankme(encoding: torch.Tensor):
+    global _RANKME_EPSILON
+    _u, s, _vh = torch.linalg.svd(
+        encoding, full_matrices=False
+    )
+
+    p = (s / torch.sum(s, axis=0)) + _RANKME_EPSILON
+
+    entropy = -torch.sum(p * torch.log(p))
+    rankme = torch.exp(entropy).item()
+
+    return rankme
+
+def set_rankme(rankme: float) -> None:
+    global _RANKME_SINGLETON
+    _RANKME_SINGLETON = rankme
+
+def get_rankme() -> float:
+    global _RANKME_SINGLETON
+    return _RANKME_SINGLETON
