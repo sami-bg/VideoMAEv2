@@ -16,7 +16,7 @@ import subprocess
 import time
 from collections import defaultdict, deque
 from pathlib import Path
-
+from functools import cache
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -641,26 +641,53 @@ def multiple_pretrain_samples_collate(batch, fold=False):
     else:
         return process_data, encoder_mask, decoder_mask
 
-_RANKME_SINGLETON = None
+
+_RANKME_ACCUMULATE = 16
 _RANKME_EPSILON = 1e-7
 
-def rankme(encoding: torch.Tensor):
-    global _RANKME_EPSILON
-    _u, s, _vh = torch.linalg.svd(
-        encoding, full_matrices=False
-    )
 
-    p = (s / torch.sum(s, axis=0)) + _RANKME_EPSILON
+class RankMe():
+    def __init__(self, limit: int, epsilon: float=1e-7):
+        self.limit = limit
+        self.bounded_queue = deque(maxlen=self.limit)
+        self.epsilon = epsilon
+        self._latest = 0.
 
-    entropy = -torch.sum(p * torch.log(p))
-    rankme = torch.exp(entropy).item()
+    def enqueue(self, encoding: torch.Tensor) -> float:
+        with torch.no_grad():
+            batch_size, *_ = encoding.shape
+            flattened = encoding.reshape(batch_size, -1).detach()
+            
+            if (world_size := get_world_size()) > 1:
+                gathered_encodings = [torch.zeros_like(flattened) for _ in range(world_size)]
+                dist.all_gather(gathered_encodings, flattened)
+                flattened = torch.cat(gathered_encodings, dim=0)
+            
+            self.bounded_queue.append(flattened)
+            
+            if len(self.bounded_queue) > 0:
+                queue_tensor = torch.cat(list(self.bounded_queue), dim=0)
+                score = self.calculate_rankme(queue_tensor, self.epsilon)
+                # NOTE important! we do this so that when SmoothedValue all_reduces across GPUs with a sum,
+                # the RankMe is scaled back up to its original value. also note that each gpu will have the 
+                # same RankMe score because of the allgather above
+                score /= world_size
+                self._latest = score
+                return score
 
-    return rankme
+            return 0.
+    
+    @classmethod
+    def calculate_rankme(cls, x: torch.Tensor, epsilon: float) -> float:
+        _u, s, _vh = torch.linalg.svd(x, full_matrices=False)
+        p = (s / torch.sum(s, axis=0)) + epsilon
+        entropy = -torch.sum(p * torch.log(p))
+        return torch.exp(entropy).item()
 
-def set_rankme(rankme: float) -> None:
-    global _RANKME_SINGLETON
-    _RANKME_SINGLETON = rankme
+    def latest(self) -> float: return self._latest
 
-def get_rankme() -> float:
-    global _RANKME_SINGLETON
-    return _RANKME_SINGLETON
+
+@cache
+def rankme() -> RankMe:
+    global _RANKME_ACCUMULATE, _RANKME_EPSILON 
+    return RankMe(limit=_RANKME_ACCUMULATE, epsilon=_RANKME_EPSILON)
