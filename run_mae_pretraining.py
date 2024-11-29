@@ -36,6 +36,8 @@ def get_args():
         'VideoMAE v2 pre-training script', add_help=False)
     parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--epochs', default=300, type=int)
+    parser.add_argument('--ipe', default=None, type=int, 
+                        help='iterations per epoch (for partial epoch training)')
     parser.add_argument('--save_ckpt_freq', default=50, type=int)
 
     # Model parameters
@@ -301,7 +303,14 @@ def main(args):
     sampler_rank = global_rank
     total_batch_size = args.batch_size * num_tasks
 
-    num_training_steps_per_epoch = len(dataset_train) // total_batch_size
+    if args.ipe is not None:
+        assert args.ipe % num_tasks == 0, \
+            f'IPE={args.ipe} not divisible by number of devices {num_tasks}'
+        num_training_steps_per_epoch = args.ipe // num_tasks
+        print(f'IPE specified, sharding across {num_tasks} devices, each with ipe={num_training_steps_per_epoch}')
+    else:
+        num_training_steps_per_epoch = len(dataset_train) // total_batch_size
+        print(f'IPE not specified, using inferred ipe={num_training_steps_per_epoch}')
 
     sampler_train = torch.utils.data.DistributedSampler(
         dataset_train, num_replicas=num_tasks, rank=sampler_rank, shuffle=True)
@@ -409,6 +418,7 @@ def main(args):
             optimizer,
             device,
             epoch,
+            args.ipe, 
             loss_scaler,
             args.clip_grad,
             log_writer=log_writer,

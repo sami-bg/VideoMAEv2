@@ -7,6 +7,7 @@
 # --------------------------------------------------------'
 import math
 import sys
+import itertools
 from typing import Iterable
 
 import torch
@@ -21,6 +22,7 @@ def train_one_epoch(model: torch.nn.Module,
                     optimizer: torch.optim.Optimizer,
                     device: torch.device,
                     epoch: int,
+                    ipe: int | None,
                     loss_scaler,
                     max_norm: float = 0,
                     patch_size: int = 16,
@@ -30,6 +32,9 @@ def train_one_epoch(model: torch.nn.Module,
                     start_steps=None,
                     lr_schedule_values=None,
                     wd_schedule_values=None):
+    
+    ipe: int = ipe or len(data_loader)
+    
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter(
@@ -43,6 +48,9 @@ def train_one_epoch(model: torch.nn.Module,
 
     for step, batch in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         # assign learning rate & weight decay for each step
+        if step == ipe:
+            break 
+        
         it = start_steps + step  # global training iteration
         if lr_schedule_values is not None or wd_schedule_values is not None:
             for i, param_group in enumerate(optimizer.param_groups):
