@@ -175,7 +175,7 @@ class HybridVideoMAE(torch.utils.data.Dataset):
         # if decoded at 24 fps, the sample interval should be 4.
         self.orig_new_step = new_step
         self.orig_skip_length = self.skip_length
-        
+
         self.video_loader = get_video_loader()
         self.image_loader = get_image_loader()
 
@@ -202,7 +202,14 @@ class HybridVideoMAE(torch.utils.data.Dataset):
                 frame_id_list = self.get_frame_id_list(duration,
                                                        segment_indices,
                                                        skip_offsets)
-                video_data = decord_vr.get_batch(frame_id_list).asnumpy()
+                
+                video_data = decord_vr.get_batch(frame_id_list)
+                
+                if isinstance(video_data, torch.Tensor):
+                    video_data = video_data.numpy()
+                else:
+                    video_data = video_data.asnumpy()
+
                 images = [
                     Image.fromarray(video_data[vid, :, :, :]).convert('RGB')
                     for vid, _ in enumerate(frame_id_list)
