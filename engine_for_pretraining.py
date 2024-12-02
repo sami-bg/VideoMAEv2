@@ -115,7 +115,6 @@ def train_one_epoch(model: torch.nn.Module,
         else:
             with torch.cuda.amp.autocast():
                 outputs = model(images, bool_masked_pos, decode_masked_pos)
-                _rankme = utils.get_rankme()
                 loss = (outputs - labels)**2
                 loss = loss.mean(dim=-1)
                 cal_loss_mask = bool_masked_pos[~decode_masked_pos].reshape(
@@ -124,6 +123,7 @@ def train_one_epoch(model: torch.nn.Module,
 
         loss_value = loss.item()
 
+        print(f"{epoch=} {step=}/{ipe} loss={loss_value}")
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
             sys.exit(2)
