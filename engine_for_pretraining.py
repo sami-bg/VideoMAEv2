@@ -113,7 +113,7 @@ def train_one_epoch(model: torch.nn.Module,
             cal_loss_mask = bool_masked_pos[~decode_masked_pos].reshape(B, -1)
             loss = (loss * cal_loss_mask).sum() / cal_loss_mask.sum()
         else:
-            with torch.cuda.amp.autocast():
+            with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                 outputs = model(images, bool_masked_pos, decode_masked_pos)
                 loss = (outputs - labels)**2
                 loss = loss.mean(dim=-1)
