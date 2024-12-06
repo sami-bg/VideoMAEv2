@@ -642,7 +642,7 @@ def multiple_pretrain_samples_collate(batch, fold=False):
         return process_data, encoder_mask, decoder_mask
 
 
-_RANKME_ACCUMULATE = 16
+_RANKME_ACCUMULATE = 4
 _RANKME_EPSILON = 1e-7
 
 
