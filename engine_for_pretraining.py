@@ -51,7 +51,7 @@ def train_one_epoch(model: torch.nn.Module,
         # either:   keep refreshing dataloader until we hit ipe
         # or:       break out of dataloader early once ipe is hit
         data_loader = iter(data_loader)
-    
+        print(f'attempting to refresh dataloader')
         for step, batch in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
             if itr % ipe == 0:
                 # we hit ipe, can stop refreshing dataloader 
