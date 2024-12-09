@@ -32,10 +32,12 @@ def train_one_epoch(model: torch.nn.Module,
                     start_steps=None,
                     lr_schedule_values=None,
                     wd_schedule_values=None):
+    if ipe is None:
+        ipe = len(data_loader)
     
-    ipe: int = ipe or min(ipe, len(data_loader)) 
+    ipe = min(ipe, len(data_loader)) 
     print(f'Using {ipe=}: {len(data_loader)=}')
-   
+    breakpoint()
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter(
