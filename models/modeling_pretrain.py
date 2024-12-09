@@ -142,8 +142,7 @@ class PretrainVisionTransformerEncoder(nn.Module):
         x = self.forward_features(x, mask)
         x = self.head(x)
         # NOTE set rankme singleton on encoder's fwd pass to avoid changing training loop
-        # NOTE Not supported for bfloat16
-        # utils.rankme().enqueue(x)
+        utils.rankme().enqueue(x)
         return x
 
 

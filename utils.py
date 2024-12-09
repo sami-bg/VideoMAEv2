@@ -655,6 +655,9 @@ class RankMe():
 
     def enqueue(self, encoding: torch.Tensor) -> float:
         with torch.no_grad():
+            if encoding.dtype != torch.float32:
+                encoding = encoding.to(torch.float32)
+
             batch_size, *_ = encoding.shape
             flattened = encoding.reshape(batch_size, -1).detach()
             
